@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Connect to GitHub</h2>
+<form method="POST">
+    <div class="mb-3">
+        <label for="token" class="form-label">GitHub Personal Access Token</label>
+        <input type="text" name="token" id="token" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Connect</button>
+</form>
+{% endblock %}

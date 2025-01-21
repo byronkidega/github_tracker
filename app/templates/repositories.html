@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Your Repositories</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Default Branch</th>
+            <th>Created At</th>
+            <th>Stars</th>
+            <th>Forks</th>
+            <th>Open Issues</th>
+            <th>Latest Commit Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for repo in repositories %}
+        <tr>
+            <td>{{ repo.name }}</td>
+            <td>{{ repo.description }}</td>
+            <td>{{ repo.default_branch }}</td>
+            <td>{{ repo.created_at }}</td>
+            <td>{{ repo.stars }}</td>
+            <td>{{ repo.forks }}</td>
+            <td>{{ repo.open_issues }}</td>
+            <td>{{ repo.latest_commit_date }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<form method="GET" action="{{ url_for('main.repositories') }}" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="search" class="form-control" placeholder="Search repositories..." value="{{ request.args.get('search', '') }}">
+        <button type="submit" class="btn btn-primary">Search</button>
+    </div>
+</form>
+
+{% endblock %}
