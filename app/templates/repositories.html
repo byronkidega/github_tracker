@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Your Repositories</h2>
+
+<!-- Search Bar -->
+<div class="mb-3">
+    <input type="text" id="search-bar" class="form-control" placeholder="Search repositories..." oninput="fetchRepositories()">
+</div>
+
+<!-- Repositories Table -->
 <table class="table">
     <thead>
         <tr>
@@ -14,28 +21,104 @@
             <th>Latest Commit Date</th>
         </tr>
     </thead>
-    <tbody>
-        {% for repo in repositories %}
-        <tr>
-            <td>{{ repo.name }}</td>
-            <td>{{ repo.description }}</td>
-            <td>{{ repo.default_branch }}</td>
-            <td>{{ repo.created_at }}</td>
-            <td>{{ repo.stars }}</td>
-            <td>{{ repo.forks }}</td>
-            <td>{{ repo.open_issues }}</td>
-            <td>{{ repo.latest_commit_date }}</td>
-        </tr>
-        {% endfor %}
+    <tbody id="repositories-table-body">
+        <!-- Data will be dynamically inserted here -->
     </tbody>
 </table>
 
+<!-- Pagination Controls -->
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center" id="pagination-controls">
+        <!-- Pagination buttons will be dynamically inserted here -->
+    </ul>
+</nav>
 
-<form method="GET" action="{{ url_for('main.repositories') }}" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control" placeholder="Search repositories..." value="{{ request.args.get('search', '') }}">
-        <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-</form>
+<script>
+    let repositories = [];  // To store fetched repositories
+    const itemsPerPage = 3;  // Number of items per page
+    let currentPage = 1;
 
+    // Fetch repositories from the server
+    async function fetchRepositories() {
+        const searchQuery = document.getElementById('search-bar').value;
+        const response = await fetch(`/repositories?search=${encodeURIComponent(searchQuery)}`, {
+            headers: { 'Accept': 'application/json' }
+        });
+        repositories = await response.json();
+        currentPage = 1;  // Reset to first page on new fetch
+        renderTable();
+        renderPagination();
+    }
+
+    // Render repositories table
+    function renderTable() {
+        const tableBody = document.getElementById('repositories-table-body');
+        tableBody.innerHTML = "";  // Clear existing table rows
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, repositories.length);
+
+        for (let i = startIndex; i < endIndex; i++) {
+            const repo = repositories[i];
+            const row = `
+                <tr>
+                    <td>${repo.name}</td>
+                    <td>${repo.description}</td>
+                    <td>${repo.default_branch}</td>
+                    <td>${repo.created_at}</td>
+                    <td>${repo.stars}</td>
+                    <td>${repo.forks}</td>
+                    <td>${repo.open_issues}</td>
+                    <td>${repo.latest_commit_date}</td>
+                </tr>
+            `;
+            tableBody.innerHTML += row;
+        }
+    }
+
+    // Render pagination controls
+    function renderPagination() {
+        const paginationControls = document.getElementById('pagination-controls');
+        paginationControls.innerHTML = "";  // Clear existing controls
+
+        const totalPages = Math.ceil(repositories.length / itemsPerPage);
+
+        // Previous button
+        if (currentPage > 1) {
+            paginationControls.innerHTML += `
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+                </li>
+            `;
+        }
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            paginationControls.innerHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                </li>
+            `;
+        }
+
+        // Next button
+        if (currentPage < totalPages) {
+            paginationControls.innerHTML += `
+                <li class="page-item">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+                </li>
+            `;
+        }
+    }
+
+    // Change the current page and re-render table and pagination controls
+    function changePage(page) {
+        currentPage = page;
+        renderTable();
+        renderPagination();
+    }
+
+    // Fetch repositories on page load
+    fetchRepositories();
+</script>
 {% endblock %}
