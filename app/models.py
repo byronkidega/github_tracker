@@ -1,4 +1,5 @@
 from . import db
+from sqlalchemy.sql import func
 from cryptography.fernet import Fernet
 
 class Repository(db.Model):
@@ -15,7 +16,19 @@ class Repository(db.Model):
     def __repr__(self):
         return f"<Repository {self.name}>"
     
-    
+
+class Commit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    hash = db.Column(db.String(40), unique=True, nullable=False)
+    author = db.Column(db.String(100), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    date = db.Column(db.DateTime, nullable=False)
+    branch = db.Column(db.String(50), nullable=False)
+    repository_id = db.Column(db.Integer, db.ForeignKey('repository.id'), nullable=False)
+    repository = db.relationship("Repository", back_populates="commits")
+
+Repository.commits = db.relationship("Commit", back_populates="repository", cascade="all, delete-orphan")
+
 
 
 class UserToken(db.Model):

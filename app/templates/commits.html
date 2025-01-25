@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Commit History for {{ repository.name }}</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Hash</th>
+            <th>Author</th>
+            <th>Message</th>
+            <th>Date</th>
+            <th>Branch</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for commit in commits %}
+        <tr>
+            <td>{{ commit.hash[:7] }}</td>
+            <td>{{ commit.author }}</td>
+            <td>{{ commit.message }}</td>
+            <td>{{ commit.date }}</td>
+            <td>{{ commit.branch }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

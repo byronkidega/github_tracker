@@ -35,7 +35,7 @@
 
 <script>
     let repositories = [];  // To store fetched repositories
-    const itemsPerPage = 3;  // Number of items per page
+    const itemsPerPage = 6;  // Number of items per page
     let currentPage = 1;
 
     // Fetch repositories from the server
@@ -45,6 +45,14 @@
             headers: { 'Accept': 'application/json' }
         });
         repositories = await response.json();
+
+        // Sort repositories by latest commit date (descending)
+        repositories.sort((a, b) => {
+            const dateA = new Date(a.latest_commit_date);
+            const dateB = new Date(b.latest_commit_date);
+            return dateB - dateA; // Descending order
+        });
+
         currentPage = 1;  // Reset to first page on new fetch
         renderTable();
         renderPagination();

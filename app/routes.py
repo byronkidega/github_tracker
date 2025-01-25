@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from github import Github
 from . import db
-from .models import Repository
+from .models import Repository, Commit
 from datetime import datetime
 from flask import jsonify
 
 
 bp = Blueprint('main', __name__)
+
 
 @bp.route("/connect", methods=["GET", "POST"])
 def connect():
@@ -35,11 +36,26 @@ def connect():
             repos = list(user.get_repos())
             print(f"Fetched {len(repos)} repositories")
 
-            # Save repositories in the database
+            # Save repositories and their commits in the database
             for repo in repos:
                 print(f"Processing repository: {repo.name}")
-                if not Repository.query.filter_by(name=repo.name).first():
-                    latest_commit_date = None
+                existing_repo = Repository.query.filter_by(name=repo.name).first()
+                commits = list(repo.get_commits())
+                if commits:
+                    latest_commit_date = commits[0].commit.author.date
+                else:
+                    print(f"No commits found for {repo.name}")
+                    
+                if existing_repo:
+                    print(f"Repository {repo.name} already exists in the database. Updating with newly fetched information...")
+                    existing_repo.stars = repo.stargazers_count
+                    existing_repo.forks = repo.forks_count
+                    existing_repo.open_issues = repo.open_issues_count
+                    existing_repo.latest_commit_date = latest_commit_date
+                    continue
+                
+                # Fetch repository details
+                latest_commit_date = None
                 try:
                     commits = list(repo.get_commits())
                     if commits:
@@ -49,7 +65,8 @@ def connect():
                         print(f"No commits found for {repo.name}")
                 except Exception as e:
                     print(f"Error fetching commits for {repo.name}: {e}")
-                
+
+                # Save the repository
                 new_repo = Repository(
                     name=repo.name,
                     description=repo.description,
@@ -61,6 +78,29 @@ def connect():
                     latest_commit_date=latest_commit_date,
                 )
                 db.session.add(new_repo)
+                db.session.flush()  # Get the new repository's ID before committing
+
+                # Save commits
+                try:
+                    for branch in repo.get_branches():
+                        branch_name = branch.name
+                        print(f"Fetching commits for branch: {branch_name}")
+                        branch_commits = list(repo.get_commits(sha=branch_name))
+                        for commit in branch_commits:
+                            # Avoid duplicate commit entries
+                            if not Commit.query.filter_by(hash=commit.sha).first():
+                                new_commit = Commit(
+                                    hash=commit.sha,
+                                    author=commit.commit.author.name,
+                                    message=commit.commit.message,
+                                    date=commit.commit.author.date,
+                                    branch=branch_name,
+                                    repository_id=new_repo.id,
+                                )
+                                db.session.add(new_commit)
+                except Exception as e:
+                    print(f"Error fetching commits for repository {repo.name}: {e}")
+
             db.session.commit()
 
             # Fetch repositories from the database and display
@@ -78,6 +118,9 @@ def connect():
             return redirect(url_for("main.connect"))
 
     return render_template("connect.html")
+
+
+
 
 
 @bp.route('/repositories', methods=['GET'])
@@ -108,4 +151,32 @@ def repositories():
     
     # Render HTML if not requesting JSON
     return render_template('repositories.html')
+
+
+@bp.route("/repository/<int:repo_id>/commits")
+def view_commits(repo_id):
+    repository = Repository.query.get_or_404(repo_id)
+    commits = Commit.query.filter_by(repository_id=repo_id).order_by(Commit.date.desc()).all()
+    return render_template("commits.html", repository=repository, commits=commits)
+
+
+@bp.route("/repository/<int:repo_id>/analytics")
+def commit_analytics(repo_id):
+    repository = Repository.query.get_or_404(repo_id)
+    commits_by_user = db.session.query(
+        Commit.author, db.func.count(Commit.id)
+    ).filter_by(repository_id=repo_id).group_by(Commit.author).all()
+
+    commits_by_branch = db.session.query(
+        Commit.branch, db.func.count(Commit.id)
+    ).filter_by(repository_id=repo_id).group_by(Commit.branch).all()
+
+    return render_template(
+        "analytics.html",
+        repository=repository,
+        commits_by_user=commits_by_user,
+        commits_by_branch=commits_by_branch,
+    )
+
+
 
