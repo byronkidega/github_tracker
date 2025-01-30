@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session
 from github import Github
 from . import db
 from .models import Repository, Commit
@@ -20,6 +20,9 @@ def connect():
             github_client = Github(token)
             user = github_client.get_user()
             print(f"Authenticated as {user.login}")
+            
+            # Save token in session
+            session["github_token"] = token
 
             # Test with a known repository
             test_repo_name = "byronkidega/github_tracker"  # Replace with a known repository name
@@ -68,6 +71,7 @@ def connect():
 
                 # Save the repository
                 new_repo = Repository(
+                    owner=repo.owner.login,
                     name=repo.name,
                     description=repo.description,
                     created_at=repo.created_at,
@@ -136,6 +140,7 @@ def repositories():
         # Convert repository data to JSON-serializable format
         repositories_data = [
             {
+                "owner": repo.owner,
                 "name": repo.name,
                 "description": repo.description or "No description",
                 "default_branch": repo.default_branch,
@@ -178,5 +183,54 @@ def commit_analytics(repo_id):
         commits_by_branch=commits_by_branch,
     )
 
+
+@bp.route("/branches/<path:repo_name>", methods=["GET"])
+def branches(repo_name):
+    print(f"Fetching branches for repository: {repo_name}")  # Debugging
+    token = session.get("github_token")
+    print(f"Token from session: {token}")  # Debugging
+    if not token:
+        flash("Authentication token required to fetch branches.", "warning")
+        return redirect(url_for("main.connect"))
+
+    try:
+        # Connect to GitHub
+        github_client = Github(token)
+        repo = github_client.get_repo(repo_name)
+        
+        
+        # Fetch the repository owner's full name
+        owner = repo.owner
+        repository = repo
+        user_fullname = owner.name  # This fetches the user's full name
+        if not user_fullname:
+            user_fullname = owner.login  # Fallback to GitHub username if full name is not set
+        
+        
+        # Fetch branch information
+        branches = repo.get_branches()
+        branch_data = []
+        recently_merged = []
+        default_branch_commits = list(repo.get_commits(repo.default_branch))
+
+        for branch in branches:
+            # Check if branch has been recently merged
+            if branch.name != repo.default_branch:
+                branch_commits = list(repo.get_commits(branch.name))
+                if any(commit.sha in [c.sha for c in default_branch_commits] for commit in branch_commits):
+                    recently_merged.append(branch.name)
+
+            branch_data.append({
+                "name": branch.name,
+                "protected": branch.protected,
+                "active": branch.name == repo.default_branch,
+                "recently_merged": branch.name in recently_merged,
+            })
+
+        return render_template("branches.html", repo=repo_name, branches=branch_data, user_fullname=user_fullname, repository=repository)
+
+    except Exception as e:
+        flash(f"Error fetching branches for {repo_name}: {e}", "danger")
+        return redirect(url_for("main.connect"))
 
 

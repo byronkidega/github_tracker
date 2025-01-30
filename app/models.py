@@ -4,6 +4,7 @@ from cryptography.fernet import Fernet
 
 class Repository(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    owner = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False)

@@ -19,6 +19,7 @@
             <th>Forks</th>
             <th>Open Issues</th>
             <th>Latest Commit Date</th>
+            <th>View Branch</th>
         </tr>
     </thead>
     <tbody id="repositories-table-body">
@@ -59,30 +60,37 @@
     }
 
     // Render repositories table
-    function renderTable() {
-        const tableBody = document.getElementById('repositories-table-body');
-        tableBody.innerHTML = "";  // Clear existing table rows
+function renderTable() {
+    const tableBody = document.getElementById('repositories-table-body');
+    tableBody.innerHTML = "";  // Clear existing table rows
 
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = Math.min(startIndex + itemsPerPage, repositories.length);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, repositories.length);
 
-        for (let i = startIndex; i < endIndex; i++) {
-            const repo = repositories[i];
-            const row = `
-                <tr>
-                    <td>${repo.name}</td>
-                    <td>${repo.description}</td>
-                    <td>${repo.default_branch}</td>
-                    <td>${repo.created_at}</td>
-                    <td>${repo.stars}</td>
-                    <td>${repo.forks}</td>
-                    <td>${repo.open_issues}</td>
-                    <td>${repo.latest_commit_date}</td>
-                </tr>
-            `;
-            tableBody.innerHTML += row;
-        }
+    for (let i = startIndex; i < endIndex; i++) {
+        const repo = repositories[i];
+        const viewBranchesLink = `/branches/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+
+        const row = `
+            <tr>
+                <td>${repo.owner}</td>
+                <td>${repo.name}</td>
+                <td>${repo.description}</td>
+                <td>${repo.default_branch}</td>
+                <td>${repo.created_at}</td>
+                <td>${repo.stars}</td>
+                <td>${repo.forks}</td>
+                <td>${repo.open_issues}</td>
+                <td>${repo.latest_commit_date}</td>
+                <td>
+                    <a href="${viewBranchesLink}" class="btn btn-sm btn-info">View Branches</a>
+                </td>
+            </tr>
+        `;
+        tableBody.innerHTML += row;
     }
+}
+
 
     // Render pagination controls
     function renderPagination() {
