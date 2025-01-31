@@ -182,6 +182,111 @@ def commit_analytics(repo_id):
         commits_by_user=commits_by_user,
         commits_by_branch=commits_by_branch,
     )
+    
+    
+@bp.route("/commits/<path:repo_name>", methods=["GET"])
+def commits(repo_name):
+    print(f"Fetching commits for repository: {repo_name}")  # Debugging
+    token = session.get("github_token")
+    print(f"Token from session: {token}")  # Debugging
+    if not token:
+        flash("Authentication token required to fetch commits.", "warning")
+        return redirect(url_for("main.connect"))
+
+    try:
+        # Connect to GitHub
+        github_client = Github(token)
+        repo = github_client.get_repo(repo_name)
+
+        # Fetch the repository owner's full name
+        owner = repo.owner
+        repository = repo
+        user_fullname = owner.name if owner.name else owner.login  # Fallback to GitHub username if full name is not set
+
+        # Get repository record from DB or create if not exists
+        db_repo = Repository.query.filter_by(name=repo.name, owner=owner.login).first()
+        if not db_repo:
+            db_repo = Repository(
+                owner=owner.login,
+                name=repo.name,
+                description=repo.description or "",
+                created_at=repo.created_at,
+                default_branch=repo.default_branch,
+                stars=repo.stargazers_count,
+                forks=repo.forks_count,
+                open_issues=repo.open_issues_count,
+                latest_commit_date=None
+            )
+            db.session.add(db_repo)
+            db.session.commit()
+
+        # Fetch all branches to map commits
+        branches = {branch.name: branch for branch in repo.get_branches()}
+
+        # Fetch commit information
+        commits = repo.get_commits()
+        commit_data = []
+
+        for commit in commits:
+            branch_name = None
+            for branch in branches:
+                if commit.sha in [c.sha for c in repo.get_commits(branch)]:
+                    branch_name = branch
+                    break  # Stop once we find the first matching branch
+
+            commit_record = Commit.query.filter_by(hash=commit.sha).first()
+            if not commit_record:
+                commit_record = Commit(
+                    hash=commit.sha,
+                    author=commit.commit.author.name if commit.commit.author else "Unknown",
+                    message=commit.commit.message,
+                    date=commit.commit.author.date if commit.commit.author else None,
+                    branch=branch_name or repo.default_branch,
+                    repository=db_repo
+                )
+                db.session.add(commit_record)
+
+            commit_data.append({
+                "sha": commit.sha,
+                "author": commit.commit.author.name if commit.commit.author else "Unknown",
+                "message": commit.commit.message,
+                "date": commit.commit.author.date.strftime('%Y-%m-%d %H:%M:%S') if commit.commit.author else "Unknown",
+                "url": commit.html_url,
+                "branch": branch_name or repo.default_branch
+            })
+
+        # Update latest commit date for the repository
+        if commit_data:
+            latest_commit_date = max(commit.date for commit in Commit.query.filter_by(repository=db_repo))
+            db_repo.latest_commit_date = latest_commit_date
+            db.session.commit()
+
+        return render_template("commits.html", repo=repo_name, commits=commit_data, user_fullname=user_fullname, repository=repository)
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error fetching commits for {repo_name}: {e}", "danger")
+        return redirect(url_for("main.connect"))
+
+
+
+@bp.route('/commits_page/<owner>/<repo>')
+def commits_page(owner, repo):
+    """Render a page showing commits for a specific repository"""
+
+    # Fetch the repository based on the name and owner
+    repository = Repository.query.filter_by(name=repo).first()
+
+    if not repository:
+        flash("Repository not found.", "danger")
+        return redirect(url_for('repositories.html'))  # Redirect to a valid page
+
+    # Use repository.id to filter commits
+    commits = Commit.query.filter_by(repository_id=repository.id).order_by(Commit.date.desc()).all()
+
+    return render_template('commits_page.html', commits=commits, repo=repo, owner=owner)
+
+
 
 
 @bp.route("/branches/<path:repo_name>", methods=["GET"])

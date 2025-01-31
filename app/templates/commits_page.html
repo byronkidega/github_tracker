@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Commits for {{ owner }}/{{ repo }}</h2>
+
+<!-- Table Container with Scrollable Body -->
+<div class="table-container">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Commit Hash</th>
+                <th>Author</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Branch</th>
+                <th>Link</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for commit in commits %}  <!-- Limit to 7 entries -->
+            <tr>
+                <td>{{ commit.hash[:7] }}</td>  <!-- Show short commit hash -->
+                <td>{{ commit.author }}</td>
+                <td>{{ commit.message }}</td>
+                <td>{{ commit.date.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ commit.branch }}</td>
+                <td>
+                    <a href="{{ commit.url }}" target="_blank" class="btn btn-sm btn-info">View on GitHub</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
+
+<style>
+    /* Table Container Styling */
+    .table-container {
+        max-height: 620px;  /* Adjust height as needed */
+        overflow-y: auto;   /* Enable vertical scrolling */
+        position: relative; /* Required for fixed header */
+    }
+
+    /* Fixed Header Styling */
+    .table-container thead th {
+        position: sticky;   /* Make header sticky */
+        top: 0;             /* Stick to the top of the container */
+        background-color: #f8f9fa;  /* Match Bootstrap table header color */
+        z-index: 1;         /* Ensure header stays above table rows */
+    }
+
+    /* Table Styling */
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-container th,
+    .table-container td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;  /* Match Bootstrap table border color */
+    }
+
+    .table-container tbody tr:hover {
+        background-color: #f1f1f1;  /* Add hover effect for rows */
+    }
+</style>
+{% endblock %}

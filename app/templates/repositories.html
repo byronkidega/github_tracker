@@ -11,6 +11,7 @@
 <table class="table">
     <thead>
         <tr>
+            <th>Owner</th>
             <th>Name</th>
             <th>Description</th>
             <th>Default Branch</th>
@@ -19,6 +20,8 @@
             <th>Forks</th>
             <th>Open Issues</th>
             <th>Latest Commit Date</th>
+            <th>Update Commits</th>
+            <th>View Commits</th>
             <th>View Branch</th>
         </tr>
     </thead>
@@ -70,6 +73,8 @@ function renderTable() {
     for (let i = startIndex; i < endIndex; i++) {
         const repo = repositories[i];
         const viewBranchesLink = `/branches/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+        const viewCommitsLink = `/commits/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+        const viewCommitsHistory = `/commits_page/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
 
         const row = `
             <tr>
@@ -82,6 +87,12 @@ function renderTable() {
                 <td>${repo.forks}</td>
                 <td>${repo.open_issues}</td>
                 <td>${repo.latest_commit_date}</td>
+                <td>
+                    <a href="${viewCommitsLink}" class="btn btn-sm btn-success">Update Commits</a>
+                </td>
+                <td>
+                    <a href="${viewCommitsHistory}" class="btn btn-sm btn-warning">View Commits</a>
+                </td>
                 <td>
                     <a href="${viewBranchesLink}" class="btn btn-sm btn-info">View Branches</a>
                 </td>
