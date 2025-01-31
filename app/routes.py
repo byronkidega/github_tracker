@@ -158,32 +158,8 @@ def repositories():
     return render_template('repositories.html')
 
 
-@bp.route("/repository/<int:repo_id>/commits")
-def view_commits(repo_id):
-    repository = Repository.query.get_or_404(repo_id)
-    commits = Commit.query.filter_by(repository_id=repo_id).order_by(Commit.date.desc()).all()
-    return render_template("commits.html", repository=repository, commits=commits)
 
 
-@bp.route("/repository/<int:repo_id>/analytics")
-def commit_analytics(repo_id):
-    repository = Repository.query.get_or_404(repo_id)
-    commits_by_user = db.session.query(
-        Commit.author, db.func.count(Commit.id)
-    ).filter_by(repository_id=repo_id).group_by(Commit.author).all()
-
-    commits_by_branch = db.session.query(
-        Commit.branch, db.func.count(Commit.id)
-    ).filter_by(repository_id=repo_id).group_by(Commit.branch).all()
-
-    return render_template(
-        "analytics.html",
-        repository=repository,
-        commits_by_user=commits_by_user,
-        commits_by_branch=commits_by_branch,
-    )
-    
-    
 @bp.route("/commits/<path:repo_name>", methods=["GET"])
 def commits(repo_name):
     print(f"Fetching commits for repository: {repo_name}")  # Debugging
