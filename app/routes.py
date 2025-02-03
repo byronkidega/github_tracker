@@ -384,7 +384,6 @@ def contributors(owner, repo_name):
                 db.session.add(new_contributor)
         
         db.session.commit()
-        flash(f"Contributors for {repo_name} updated successfully!", category="success")
 
     except Exception as e:
         flash(f"Error fetching contributors: {str(e)}", "danger")

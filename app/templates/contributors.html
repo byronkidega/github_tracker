@@ -5,8 +5,12 @@
         <h2>Contributor Analysis for {{ repo_name }}</h2>
 
         <!-- Chart for Commits, Lines Added, and Lines Removed -->
-        <canvas id="commitChart" width="400" height="200"></canvas>
-        <canvas id="lineChart" width="400" height="200" class="mt-4"></canvas>
+        <div style="width: 60%; height: 300px; margin: auto;">
+            <canvas id="commitChart"></canvas>
+        </div>
+        <div style="width: 60%; height: 300px; margin: auto;" class="mt-4">
+            <canvas id="lineChart"></canvas>
+        </div>
 
         <table class="table table-bordered table-striped mt-4">
             <thead>
@@ -37,63 +41,94 @@
         <a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script>
         const commitChartCtx = document.getElementById('commitChart').getContext('2d');
         const lineChartCtx = document.getElementById('lineChart').getContext('2d');
     
-        // Create arrays for names, commit counts, lines added, and lines removed
-        const contributorNames = {{ contributors|map(attribute='login')|join(', ') }};
-        const commitCounts = {{ contributors|map(attribute='total_commits')|join(', ') }};
-        const linesAdded = {{ contributors|map(attribute='lines_added')|join(', ') }};
-        const linesRemoved = {{ contributors|map(attribute='lines_removed')|join(', ') }};
+        // Use the tojson filter to pass the data as valid JavaScript arrays
+        const contributorNames = {{ contributors|map(attribute='login')|list|tojson }};
+        const commitCounts = {{ contributors|map(attribute='total_commits')|list|tojson }};
+        const linesAdded = {{ contributors|map(attribute='lines_added')|list|tojson }};
+        const linesRemoved = {{ contributors|map(attribute='lines_removed')|list|tojson }};
     
-        const commitChart = new Chart(commitChartCtx, {
-            type: 'bar',
-            data: {
-                labels: contributorNames,  // Labels based on contributor names
-                datasets: [{
-                    label: 'Commits',
-                    data: commitCounts,  // Commit counts from the data
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+        // Check if there are contributors before creating charts
+        if (contributorNames.length === 0) {
+            document.getElementById('commitChart').style.display = 'none';
+            document.getElementById('lineChart').style.display = 'none';
+            alert('No contributor data available.');
+        } else {
+            const commitChart = new Chart(commitChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: contributorNames,  // Labels based on contributor names
+                    datasets: [{
+                        label: 'Commits',
+                        data: commitCounts,  // Commit counts from the data
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return tooltipItem.raw + ' commits';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
-    
-        const lineChart = new Chart(lineChartCtx, {
-            type: 'bar',
-            data: {
-                labels: contributorNames,  // Labels based on contributor names
-                datasets: [{
-                    label: 'Lines Added',
-                    data: linesAdded,  // Lines added data
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }, {
-                    label: 'Lines Removed',
-                    data: linesRemoved,  // Lines removed data
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+            });
+
+            const lineChart = new Chart(lineChartCtx, {
+                type: 'bar',
+                data: {
+                    labels: contributorNames,  // Labels based on contributor names
+                    datasets: [{
+                        label: 'Lines Added',
+                        data: linesAdded,  // Lines added data
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Lines Removed',
+                        data: linesRemoved,  // Lines removed data
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    return tooltipItem.raw + ' lines';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     </script>
     
 {% endblock %}
