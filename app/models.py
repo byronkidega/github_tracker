@@ -1,6 +1,7 @@
 from . import db
 from sqlalchemy.sql import func
-from cryptography.fernet import Fernet
+from datetime import datetime
+
 
 class Repository(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -13,6 +14,10 @@ class Repository(db.Model):
     forks = db.Column(db.Integer, nullable=False, default=0)
     open_issues = db.Column(db.Integer, nullable=False, default=0)
     latest_commit_date = db.Column(db.DateTime, nullable=True)
+    
+    
+    commits = db.relationship("Commit", back_populates="repository", cascade="all, delete-orphan")
+    contributors = db.relationship("Contributor", back_populates="repository", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Repository {self.name}>"
@@ -28,7 +33,20 @@ class Commit(db.Model):
     repository_id = db.Column(db.Integer, db.ForeignKey('repository.id'), nullable=False)
     repository = db.relationship("Repository", back_populates="commits")
 
-Repository.commits = db.relationship("Commit", back_populates="repository", cascade="all, delete-orphan")
+
+
+class Contributor(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    repository_id = db.Column(db.Integer, db.ForeignKey('repository.id'), nullable=False)
+    repository = db.relationship("Repository", back_populates="contributors")
+    contributor_name = db.Column(db.String(255), nullable=False)
+    commit_count = db.Column(db.Integer, default=0)
+    lines_added = db.Column(db.Integer, default=0)
+    lines_removed = db.Column(db.Integer, default=0)
+    last_contributed = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Contributor {self.contributor_name} - {self.repository.name}>"
 
 
 
@@ -38,10 +56,12 @@ class UserToken(db.Model):
 
     @staticmethod
     def encrypt_token(token, key):
+        from cryptography.fernet import Fernet
         fernet = Fernet(key)
         return fernet.encrypt(token.encode()).decode()
 
     @staticmethod
     def decrypt_token(encrypted_token, key):
+        from cryptography.fernet import Fernet
         fernet = Fernet(key)
         return fernet.decrypt(encrypted_token.encode()).decode()

@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session
 from github import Github
 from . import db
-from .models import Repository, Commit
+from .models import Repository, Commit, Contributor
 from datetime import datetime
 from flask import jsonify
 
@@ -315,3 +315,79 @@ def branches(repo_name):
         return redirect(url_for("main.connect"))
 
 
+@bp.route("/contributors/<owner>/<repo_name>")
+def contributors(owner, repo_name):
+    token = session.get("github_token")  # Retrieve token from session
+    if not token:
+        flash("GitHub token not found. Please connect again.", "danger")
+        return redirect(url_for("main.connect"))
+
+    try:
+        github_client = Github(token)
+        repo = github_client.get_repo(f"{owner}/{repo_name}")
+        contributors = repo.get_contributors()
+
+        contributor_data_list = []  # List to hold contributor data
+
+        for contributor in contributors:
+            print(f"Contributor: {contributor.login}")
+            # Get the contributor's stats
+            contributor_data = repo.get_stats_contributors()
+
+            # Initialize variables to track the contributor's stats
+            total_commits = 0
+            lines_added = 0
+            lines_removed = 0
+            last_contributed = None
+
+            # Find the contributor's stats
+            for data in contributor_data:
+                if data.author.login == contributor.login:
+                    total_commits = data.total
+                    lines_added = sum(week.a for week in data.weeks)
+                    lines_removed = sum(week.d for week in data.weeks)
+                    # Get the most recent commit date
+                    if data.weeks:
+                        last_contributed = max(week.w for week in data.weeks)
+
+            # Prepare contributor info for display
+            contributor_info = {
+                "login": contributor.login,
+                "total_commits": total_commits,
+                "lines_added": lines_added,
+                "lines_removed": lines_removed,
+                "last_contributed": last_contributed
+            }
+
+            contributor_data_list.append(contributor_info)
+
+            # Check if the contributor already exists in the database
+            existing_contributor = Contributor.query.filter_by(
+                contributor_name=contributor.login, repository_id=repo.id
+            ).first()
+            
+            if existing_contributor:
+                existing_contributor.commit_count = total_commits
+                existing_contributor.lines_added = lines_added
+                existing_contributor.lines_removed = lines_removed
+                existing_contributor.last_contributed = last_contributed
+            else:
+                # Create a new contributor record
+                new_contributor = Contributor(
+                    repository_id=repo.id,
+                    contributor_name=contributor.login,
+                    commit_count=total_commits,
+                    lines_added=lines_added,
+                    lines_removed=lines_removed,
+                    last_contributed=last_contributed
+                )
+                db.session.add(new_contributor)
+        
+        db.session.commit()
+        flash(f"Contributors for {repo_name} updated successfully!", category="success")
+
+    except Exception as e:
+        flash(f"Error fetching contributors: {str(e)}", "danger")
+
+    # Render the contributors template and pass the contributor data
+    return render_template("contributors.html", owner=owner, repo_name=repo_name, contributors=contributor_data_list)

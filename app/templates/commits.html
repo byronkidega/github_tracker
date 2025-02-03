@@ -3,9 +3,9 @@
 {% block title %}Commits - {{ repository.name }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-3">Commits for <strong>{{ repository.name }}</strong> by <strong>{{ user_fullname }}</strong></h2>
-    
+<h2 class="mb-3">Commits for <strong>{{ repository.name }}</strong> by <strong>{{ user_fullname }}</strong></h2>
+
+<div class="table-container">
     <table class="table table-striped">
         <thead>
             <tr>
@@ -38,7 +38,41 @@
     {% if not commits %}
         <p class="text-muted">No commits found for this repository.</p>
     {% endif %}
-
-    <a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
 </div>
+
+<a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
+
+<style>
+    /* Table Container Styling */
+    .table-container {
+        max-height: 620px;  /* Adjust height as needed */
+        overflow-y: auto;   /* Enable vertical scrolling */
+        position: relative; /* Required for fixed header */
+    }
+
+    /* Fixed Header Styling */
+    .table-container thead th {
+        position: sticky;   /* Make header sticky */
+        top: 0;             /* Stick to the top of the container */
+        background-color: #f8f9fa;  /* Match Bootstrap table header color */
+        z-index: 1;         /* Ensure header stays above table rows */
+    }
+
+    /* Table Styling */
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-container th,
+    .table-container td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;  /* Match Bootstrap table border color */
+    }
+
+    .table-container tbody tr:hover {
+        background-color: #f1f1f1;  /* Add hover effect for rows */
+    }
+</style>
 {% endblock %}

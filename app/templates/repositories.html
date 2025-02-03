@@ -23,6 +23,7 @@
             <th>Update Commits</th>
             <th>View Commits</th>
             <th>View Branch</th>
+            <th>View Contributors</th>
         </tr>
     </thead>
     <tbody id="repositories-table-body">
@@ -75,6 +76,7 @@ function renderTable() {
         const viewBranchesLink = `/branches/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
         const viewCommitsLink = `/commits/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
         const viewCommitsHistory = `/commits_page/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+        const viewContributorsLink = `/contributors/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
 
         const row = `
             <tr>
@@ -95,6 +97,9 @@ function renderTable() {
                 </td>
                 <td>
                     <a href="${viewBranchesLink}" class="btn btn-sm btn-info">View Branches</a>
+                </td>
+                <td>
+                    <a href="${viewContributorsLink}" class="btn btn-sm btn-primary">View Contributors</a>
                 </td>
             </tr>
         `;

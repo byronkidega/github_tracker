@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2>Contributor Analysis for {{ repo_name }}</h2>
+
+        <!-- Chart for Commits, Lines Added, and Lines Removed -->
+        <canvas id="commitChart" width="400" height="200"></canvas>
+        <canvas id="lineChart" width="400" height="200" class="mt-4"></canvas>
+
+        <table class="table table-bordered table-striped mt-4">
+            <thead>
+                <tr>
+                    <th>Contributor Name</th>
+                    <th>Commits</th>
+                    <th>Lines Added</th>
+                    <th>Lines Removed</th>
+                    <th>Last Contributed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contributor in contributors %}
+                    <tr>
+                        <td>{{ contributor.login }}</td>
+                        <td>{{ contributor.total_commits }}</td>
+                        <td>{{ contributor.lines_added }}</td>
+                        <td>{{ contributor.lines_removed }}</td>
+                        <td>{{ contributor.last_contributed.strftime('%Y-%m-%d') if contributor.last_contributed else 'N/A' }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">No contributors found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
+    </div>
+
+    <script>
+        const commitChartCtx = document.getElementById('commitChart').getContext('2d');
+        const lineChartCtx = document.getElementById('lineChart').getContext('2d');
+    
+        // Create arrays for names, commit counts, lines added, and lines removed
+        const contributorNames = {{ contributors|map(attribute='login')|join(', ') }};
+        const commitCounts = {{ contributors|map(attribute='total_commits')|join(', ') }};
+        const linesAdded = {{ contributors|map(attribute='lines_added')|join(', ') }};
+        const linesRemoved = {{ contributors|map(attribute='lines_removed')|join(', ') }};
+    
+        const commitChart = new Chart(commitChartCtx, {
+            type: 'bar',
+            data: {
+                labels: contributorNames,  // Labels based on contributor names
+                datasets: [{
+                    label: 'Commits',
+                    data: commitCounts,  // Commit counts from the data
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    
+        const lineChart = new Chart(lineChartCtx, {
+            type: 'bar',
+            data: {
+                labels: contributorNames,  // Labels based on contributor names
+                datasets: [{
+                    label: 'Lines Added',
+                    data: linesAdded,  // Lines added data
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Lines Removed',
+                    data: linesRemoved,  // Lines removed data
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+    
+{% endblock %}
