@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Contributor Analysis for {{ owner }}/{{ repo }}</h2>
+
+    <!-- Chart for Commits, Lines Added, and Lines Removed -->
+    <div style="width: 60%; height: 300px; margin: auto;">
+        <canvas id="commitChart"></canvas>
+    </div>
+    <div style="width: 60%; height: 300px; margin: auto;" class="mt-4">
+        <canvas id="lineChart"></canvas>
+    </div>
+
+    <table class="table table-bordered table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Contributor Name</th>
+                <th>Commits</th>
+                <th>Lines Added</th>
+                <th>Lines Removed</th>
+                <th>Last Contributed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for contributor in contributors %}
+                <tr>
+                    <td>{{ contributor.contributor_name }}</td>
+                    <td>{{ contributor.commit_count }}</td>
+                    <td>{{ contributor.lines_added }}</td>
+                    <td>{{ contributor.lines_removed }}</td>
+                    <td>
+                        {% if contributor.last_contributed %}
+                            {{ contributor.last_contributed.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="5">No contributors found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const commitChartCtx = document.getElementById('commitChart').getContext('2d');
+    const lineChartCtx = document.getElementById('lineChart').getContext('2d');
+
+    // Use the correct field names from your Contributor model
+    const contributorNames = {{ contributors|map(attribute='contributor_name')|list|tojson }};
+    const commitCounts = {{ contributors|map(attribute='commit_count')|list|tojson }};
+    const linesAdded = {{ contributors|map(attribute='lines_added')|list|tojson }};
+    const linesRemoved = {{ contributors|map(attribute='lines_removed')|list|tojson }};
+
+    // Check if there are contributors before creating charts
+    if (contributorNames.length === 0) {
+        document.getElementById('commitChart').style.display = 'none';
+        document.getElementById('lineChart').style.display = 'none';
+        alert('No contributor data available.');
+    } else {
+        const commitChart = new Chart(commitChartCtx, {
+            type: 'bar',
+            data: {
+                labels: contributorNames,
+                datasets: [{
+                    label: 'Commits',
+                    data: commitCounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.raw + ' commits';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        const lineChart = new Chart(lineChartCtx, {
+            type: 'bar',
+            data: {
+                labels: contributorNames,
+                datasets: [{
+                    label: 'Lines Added',
+                    data: linesAdded,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Lines Removed',
+                    data: linesRemoved,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(tooltipItem) {
+                                return tooltipItem.raw + ' lines';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+<style>
+    /* Add your custom table styling if needed */
+    .table-container {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .table-container th,
+    .table-container td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .table-container tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+</style>
+
+{% endblock %}

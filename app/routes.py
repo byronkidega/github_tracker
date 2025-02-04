@@ -318,79 +318,86 @@ def branches(repo_name):
 
 @bp.route("/contributors/<owner>/<repo_name>")
 def contributors(owner, repo_name):
-    token = session.get("github_token")  # Retrieve token from session
+    token = session.get("github_token")
     if not token:
         flash("GitHub token not found. Please connect again.", "danger")
         return redirect(url_for("main.connect"))
 
     try:
+        # Fetch the LOCAL repository from your database
+        local_repo = Repository.query.filter_by(owner=owner, name=repo_name).first()
+        if not local_repo:
+            flash("Repository not found in local database.", "danger")
+            return redirect(url_for("main.repositories"))
+
         github_client = Github(token)
-        repo = github_client.get_repo(f"{owner}/{repo_name}")
-        contributors = repo.get_contributors()
+        repo = github_client.get_repo(f"{owner}/{repo_name}")  # GitHub API repo
 
-        contributor_data_list = []  # List to hold contributor data
+        # Get contributor stats ONCE (outside the loop)
+        contributor_stats = repo.get_stats_contributors()
 
-        for contributor in contributors:
-            print(f"Contributor: {contributor.login}")
-            # Get the contributor's stats
-            contributor_data = repo.get_stats_contributors()
+        # Process all contributors from the stats
+        for data in contributor_stats:
+            contributor_login = data.author.login
+            total_commits = data.total
+            lines_added = sum(week.a for week in data.weeks)
+            lines_removed = sum(week.d for week in data.weeks)
 
-            # Initialize variables to track the contributor's stats
-            total_commits = 0
-            lines_added = 0
-            lines_removed = 0
+            # Handle last_contributed date (convert from Unix timestamp)
             last_contributed = None
+            if data.weeks:
+                latest_week = max(data.weeks, key=lambda week: week.w)
+                last_contributed = latest_week.w  # Already a datetime object!
 
-            # Find the contributor's stats
-            for data in contributor_data:
-                if data.author.login == contributor.login:
-                    total_commits = data.total
-                    lines_added = sum(week.a for week in data.weeks)
-                    lines_removed = sum(week.d for week in data.weeks)
-                    # Get the most recent commit date
-                    if data.weeks:
-                        last_contributed = max(week.w for week in data.weeks)
-
-            # Prepare contributor info for display
-            contributor_info = {
-                "login": contributor.login,
-                "total_commits": total_commits,
-                "lines_added": lines_added,
-                "lines_removed": lines_removed,
-                "last_contributed": last_contributed
-            }
-
-            contributor_data_list.append(contributor_info)
-
-            # Check if the contributor already exists in the database
+            # Check if contributor exists
             existing_contributor = Contributor.query.filter_by(
-                contributor_name=contributor.login, repository_id=repo.id
+                contributor_name=contributor_login,
+                repository_id=local_repo.id  # Use LOCAL repository ID
             ).first()
-            
+
             if existing_contributor:
                 existing_contributor.commit_count = total_commits
                 existing_contributor.lines_added = lines_added
                 existing_contributor.lines_removed = lines_removed
                 existing_contributor.last_contributed = last_contributed
             else:
-                # Create a new contributor record
                 new_contributor = Contributor(
-                    repository_id=repo.id,
-                    contributor_name=contributor.login,
+                    repository_id=local_repo.id,  # Use LOCAL repository ID
+                    contributor_name=contributor_login,
                     commit_count=total_commits,
                     lines_added=lines_added,
                     lines_removed=lines_removed,
                     last_contributed=last_contributed
                 )
                 db.session.add(new_contributor)
-        
+
         db.session.commit()
+        flash("Contributors updated successfully!", "success")
 
     except Exception as e:
         flash(f"Error fetching contributors: {str(e)}", "danger")
 
-    # Render the contributors template and pass the contributor data
-    return render_template("contributors.html", owner=owner, repo_name=repo_name, contributors=contributor_data_list)
+    
+    return redirect(url_for("main.contributors_page", owner=owner, repo=repo_name))
+
+
+
+@bp.route('/contributors_page/<owner>/<repo>')
+def contributors_page(owner, repo):
+    """Render a page showing contributors for a specific repository"""
+
+    # Fetch the repository based on the name and owner
+    repository = Repository.query.filter_by(name=repo, owner=owner).first()
+
+    if not repository:
+        flash("Repository not found.", "danger")
+        return redirect(url_for('main.repositories'))  # Redirect to repositories page
+
+    # Use repository.id to filter contributors
+    contributors = Contributor.query.filter_by(repository_id=repository.id).order_by(Contributor.commit_count.desc()).all()
+
+    return render_template('contributors_page.html', contributors=contributors, repo=repo, owner=owner)
+
 
 
 @bp.route("/issues/<path:repo_name>", methods=["GET"])
