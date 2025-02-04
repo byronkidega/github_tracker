@@ -24,6 +24,7 @@
             <th>View Commits</th>
             <th>View Branch</th>
             <th>View Contributors</th>
+            <th>View Issues</th>
         </tr>
     </thead>
     <tbody id="repositories-table-body">
@@ -77,6 +78,7 @@ function renderTable() {
         const viewCommitsLink = `/commits/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
         const viewCommitsHistory = `/commits_page/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
         const viewContributorsLink = `/contributors/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+        const viewIssuesLink = `/issues/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
 
         const row = `
             <tr>
@@ -100,6 +102,9 @@ function renderTable() {
                 </td>
                 <td>
                     <a href="${viewContributorsLink}" class="btn btn-sm btn-primary">View Contributors</a>
+                </td>
+                <td>
+                    <a href="${viewIssuesLink}" class="btn btn-sm btn-secondary">View Issues</a>
                 </td>
             </tr>
         `;

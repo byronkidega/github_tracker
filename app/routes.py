@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, session
 from github import Github
 from . import db
-from .models import Repository, Commit, Contributor
+from .models import Repository, Commit, Contributor, Issue
 from datetime import datetime
 from flask import jsonify
 
@@ -51,6 +51,7 @@ def connect():
                     
                 if existing_repo:
                     print(f"Repository {repo.name} already exists in the database. Updating with newly fetched information...")
+                    existing_repo.description = repo.description
                     existing_repo.stars = repo.stargazers_count
                     existing_repo.forks = repo.forks_count
                     existing_repo.open_issues = repo.open_issues_count
@@ -390,3 +391,96 @@ def contributors(owner, repo_name):
 
     # Render the contributors template and pass the contributor data
     return render_template("contributors.html", owner=owner, repo_name=repo_name, contributors=contributor_data_list)
+
+
+@bp.route("/issues/<path:repo_name>", methods=["GET"])
+def issues(repo_name):
+    print(f"Fetching issues for repository: {repo_name}")  # Debugging
+    token = session.get("github_token")
+    print(f"Token from session: {token}")  # Debugging
+
+    if not token:
+        flash("Authentication token required to fetch issues.", "warning")
+        return redirect(url_for("main.connect"))
+
+    try:
+        # Connect to GitHub
+        github_client = Github(token)
+        repo = github_client.get_repo(repo_name)
+        
+        # Fetch repository record from the database
+        db_repo = Repository.query.filter_by(name=repo.name, owner=repo.owner.login).first()
+        if not db_repo:
+            db_repo = Repository(
+                owner=repo.owner.login,
+                name=repo.name,
+                description=repo.description or "",
+                created_at=repo.created_at,
+                default_branch=repo.default_branch,
+                stars=repo.stargazers_count,
+                forks=repo.forks_count,
+                open_issues=repo.open_issues_count,
+                latest_commit_date=None,
+            )
+            db.session.add(db_repo)
+            db.session.commit()
+
+        # Fetch issues
+        issues = repo.get_issues(state="all")  # Fetch both open and closed issues
+        issue_data = []
+        assignees = set()  # Unique assignees
+        labels = set()     # Unique labels
+
+
+        for issue in issues:
+            assignee = issue.assignee.login if issue.assignee else "Unassigned"
+            issue_labels = [label.name for label in issue.labels]
+            
+            issue_data.append({
+                "title": issue.title,
+                "state": issue.state,  # "open" or "closed"
+                "assignee": assignee,
+                "labels": issue_labels,
+                "milestone": issue.milestone.title if issue.milestone else "No milestone",
+                "created_at": issue.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                "updated_at": issue.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                "url": issue.html_url,
+            })
+            
+            # Add assignee and labels to sets
+            assignees.add(assignee)
+            labels.update(issue_labels)
+            
+            # Check if the issue already exists in the database
+            existing_issue = Issue.query.filter_by(issue_id=issue.id).first()
+            if not existing_issue:
+                # Create a new issue record
+                new_issue = Issue(
+                    repository_id=db_repo.id,
+                    issue_id=issue.id,
+                    title=issue.title,
+                    state=issue.state,
+                    assignee=assignee,
+                    labels=",".join(issue_labels),  # Store labels as a comma-separated string
+                    milestone=issue.milestone.title if issue.milestone else None,
+                    created_at=issue.created_at,
+                    updated_at=issue.updated_at,
+                    closed_at=issue.closed_at,
+                    url=issue.html_url,
+                )
+                db.session.add(new_issue)
+
+            db.session.commit()
+
+        return render_template(
+            "issues.html",
+            repo=repo_name,
+            issues=issue_data,
+            user_fullname=repo.owner.name or repo.owner.login,
+            assignees=sorted(assignees),  # Pass unique assignees
+            labels=sorted(labels),       # Pass unique labels
+        )
+
+    except Exception as e:
+        flash(f"Error fetching issues for {repo_name}: {e}", "danger")
+        return redirect(url_for("main.connect"))

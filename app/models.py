@@ -18,6 +18,7 @@ class Repository(db.Model):
     
     commits = db.relationship("Commit", back_populates="repository", cascade="all, delete-orphan")
     contributors = db.relationship("Contributor", back_populates="repository", cascade="all, delete-orphan")
+    issues = db.relationship("Issue", back_populates="repository", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Repository {self.name}>"
@@ -48,6 +49,24 @@ class Contributor(db.Model):
     def __repr__(self):
         return f"<Contributor {self.contributor_name} - {self.repository.name}>"
 
+
+class Issue(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    repository_id = db.Column(db.Integer, db.ForeignKey('repository.id'), nullable=False)
+    repository = db.relationship("Repository", back_populates="issues")  # Relationship to Repository
+    issue_id = db.Column(db.Integer, unique=True, nullable=False)  # GitHub issue ID
+    title = db.Column(db.String(255), nullable=False)
+    state = db.Column(db.String(20), nullable=False)  # "open" or "closed"
+    assignee = db.Column(db.String(100), nullable=True)  # GitHub username of the assignee
+    labels = db.Column(db.String(255), nullable=True)  # Comma-separated list of labels
+    milestone = db.Column(db.String(100), nullable=True)  # Milestone title
+    created_at = db.Column(db.DateTime, nullable=False)
+    updated_at = db.Column(db.DateTime, nullable=False)
+    closed_at = db.Column(db.DateTime, nullable=True)  # Only for closed issues
+    url = db.Column(db.String(255), nullable=False)  # URL to the issue on GitHub
+
+    def __repr__(self):
+        return f"<Issue {self.title} - {self.state}>"
 
 
 class UserToken(db.Model):

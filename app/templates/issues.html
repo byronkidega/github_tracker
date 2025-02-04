@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Issues for {{ repo }}</h1>
+    <p>Repository Owner: {{ user_fullname }}</p>
+
+    <!-- Filter and Sort Controls -->
+    <div class="mb-3">
+        <label for="filter-state">Filter by Status:</label>
+        <select id="filter-state" class="form-select" onchange="filterIssues()">
+            <option value="all">All</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+        </select>
+
+        <label for="filter-assignee" class="mt-2">Filter by Assignee:</label>
+        <select id="filter-assignee" class="form-select" onchange="filterIssues()">
+            <option value="all">All</option>
+            {% for assignee in assignees %}
+            <option value="{{ assignee }}">{{ assignee }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="filter-label" class="mt-2">Filter by Label:</label>
+        <select id="filter-label" class="form-select" onchange="filterIssues()">
+            <option value="all">All</option>
+            {% for label in labels %}
+            <option value="{{ label }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Issues Table -->
+    <div class="table-container">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Assignee</th>
+                    <th>Labels</th>
+                    <th>Milestone</th>
+                    <th>Created At</th>
+                    <th>Updated At</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody id="issues-table-body">
+                {% for issue in issues %}
+                <tr data-state="{{ issue.state }}" data-assignee="{{ issue.assignee }}" data-labels="{{ issue.labels|join(',') }}">
+                    <td>{{ issue.title }}</td>
+                    <td>
+                        <span class="badge {% if issue.state == 'open' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ issue.state }}
+                        </span>
+                    </td>
+                    <td>{{ issue.assignee }}</td>
+                    <td>
+                        {% for label in issue.labels %}
+                        <span class="badge bg-secondary">{{ label }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ issue.milestone }}</td>
+                    <td>{{ issue.created_at }}</td>
+                    <td>{{ issue.updated_at }}</td>
+                    <td>
+                        <a href="{{ issue.url }}" target="_blank" class="btn btn-sm btn-info">View on GitHub</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
+</div>
+
+<script>
+    // Function to filter issues based on selected criteria
+    function filterIssues() {
+        const filterState = document.getElementById("filter-state").value;
+        const filterAssignee = document.getElementById("filter-assignee").value;
+        const filterLabel = document.getElementById("filter-label").value;
+
+        const rows = document.querySelectorAll("#issues-table-body tr");
+
+        rows.forEach(row => {
+            const state = row.getAttribute("data-state");
+            const assignee = row.getAttribute("data-assignee");
+            const labels = row.getAttribute("data-labels").split(",");
+
+            const stateMatch = filterState === "all" || state === filterState;
+            const assigneeMatch = filterAssignee === "all" || assignee === filterAssignee;
+            const labelMatch = filterLabel === "all" || labels.includes(filterLabel);
+
+            if (stateMatch && assigneeMatch && labelMatch) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+</script>
+
+<style>
+    /* Table Container Styling */
+    .table-container {
+        max-height: 500px;  /* Adjust height as needed */
+        overflow-y: auto;   /* Enable vertical scrolling */
+    }
+
+    /* Table Styling */
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-container th,
+    .table-container td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;  /* Match Bootstrap table border color */
+    }
+
+    .table-container tbody tr:hover {
+        background-color: #f1f1f1;  /* Add hover effect for rows */
+    }
+</style>
+{% endblock %}
