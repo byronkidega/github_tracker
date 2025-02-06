@@ -491,3 +491,23 @@ def issues(repo_name):
     except Exception as e:
         flash(f"Error fetching issues for {repo_name}: {e}", "danger")
         return redirect(url_for("main.connect"))
+    
+    
+@bp.route('/issues_page/<owner>/<repo>')
+def issues_page(owner, repo):
+    """Render a page showing issues for a specific repository using local data"""
+    # Fetch the repository from the database
+    repository = Repository.query.filter_by(owner=owner, name=repo).first()
+
+    if not repository:
+        flash("Repository not found.", "danger")
+        return redirect(url_for('main.repositories'))
+
+    # Get issues from database ordered by creation date
+    issues = Issue.query.filter_by(repository_id=repository.id).order_by(Issue.created_at.desc()).all()
+
+    return render_template('issues_page.html', 
+                         issues=issues, 
+                         repo=repo, 
+                         owner=owner,
+                         repository=repository)

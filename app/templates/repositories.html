@@ -79,6 +79,7 @@ function renderTable() {
         const viewContributorsLink = `/contributors/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
         const viewContributorsHistory = `/contributors_page/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
         const viewIssuesLink = `/issues/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+        const viewIssuesHistory = `/issues_page/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
 
         const row = `
             <tr>
@@ -105,7 +106,9 @@ function renderTable() {
                     <a href="${viewContributorsHistory}" class="btn btn-sm btn-warning">View Contributors</a>
                 </td>
                 <td>
-                    <a href="${viewIssuesLink}" class="btn btn-sm btn-secondary">View Issues</a>
+                    <a href="${viewIssuesLink}" class="btn btn-sm btn-secondary">Update Issues</a>
+                    <br>
+                    <a href="${viewIssuesHistory}" class="btn btn-sm btn-warning">View Issues</a>
                 </td>
             </tr>
         `;
