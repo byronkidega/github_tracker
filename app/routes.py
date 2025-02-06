@@ -493,9 +493,9 @@ def issues(repo_name):
         return redirect(url_for("main.connect"))
     
     
-@bp.route('/issues_page/<owner>/<repo>')
+@bp.route('/issues_page/<owner>/<repo>', methods=['GET', 'POST'])
 def issues_page(owner, repo):
-    """Render a page showing issues for a specific repository using local data"""
+    """Render a page showing issues for a specific repository with filtering options."""
     # Fetch the repository from the database
     repository = Repository.query.filter_by(owner=owner, name=repo).first()
 
@@ -503,11 +503,38 @@ def issues_page(owner, repo):
         flash("Repository not found.", "danger")
         return redirect(url_for('main.repositories'))
 
-    # Get issues from database ordered by creation date
-    issues = Issue.query.filter_by(repository_id=repository.id).order_by(Issue.created_at.desc()).all()
+    # Fetch issues associated with the repository
+    issues_query = Issue.query.filter_by(repository_id=repository.id)
+
+    # Get filter values from the form
+    selected_assignee = request.form.get('assignee')
+    selected_label = request.form.get('label')
+    selected_status = request.form.get('status')  # Added status filter
+
+    # Apply filters if selected
+    if selected_assignee:
+        issues_query = issues_query.filter(Issue.assignee == selected_assignee)
+    if selected_label:
+        issues_query = issues_query.filter(Issue.labels.like(f'%{selected_label}%'))
+    if selected_status:
+        issues_query = issues_query.filter(Issue.state == selected_status)  # Filtering by status (open/closed)
+
+    # Get filtered and ordered issues
+    issues = issues_query.order_by(Issue.created_at.desc()).all()
+
+    # Extract unique assignees and labels for filter options
+    all_issues = Issue.query.filter_by(repository_id=repository.id).all()
+    assignees = sorted(set(issue.assignee for issue in all_issues if issue.assignee))
+    labels = sorted(set(label.strip() for issue in all_issues for label in issue.labels.split(',') if label.strip()))
 
     return render_template('issues_page.html', 
-                         issues=issues, 
-                         repo=repo, 
-                         owner=owner,
-                         repository=repository)
+                           issues=issues, 
+                           repo=repo, 
+                           owner=owner,
+                           repository=repository,
+                           assignees=assignees,
+                           labels=labels,
+                           selected_assignee=selected_assignee,
+                           selected_label=selected_label,
+                           selected_status=selected_status)  # Pass selected status to the template
+

@@ -6,29 +6,33 @@
     <p>Repository Owner: {{ user_fullname }}</p>
 
     <!-- Filter and Sort Controls -->
-    <div class="mb-3">
-        <label for="filter-state">Filter by Status:</label>
-        <select id="filter-state" class="form-select" onchange="filterIssues()">
-            <option value="all">All</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-        </select>
-
-        <label for="filter-assignee" class="mt-2">Filter by Assignee:</label>
-        <select id="filter-assignee" class="form-select" onchange="filterIssues()">
-            <option value="all">All</option>
-            {% for assignee in assignees %}
-            <option value="{{ assignee }}">{{ assignee }}</option>
-            {% endfor %}
-        </select>
-
-        <label for="filter-label" class="mt-2">Filter by Label:</label>
-        <select id="filter-label" class="form-select" onchange="filterIssues()">
-            <option value="all">All</option>
-            {% for label in labels %}
-            <option value="{{ label }}">{{ label }}</option>
-            {% endfor %}
-        </select>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label for="filter-state">Filter by Status:</label>
+            <select id="filter-state" class="form-select" onchange="filterIssues()">
+                <option value="all">All</option>
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="filter-assignee">Filter by Assignee:</label>
+            <select id="filter-assignee" class="form-select" onchange="filterIssues()">
+                <option value="all">All</option>
+                {% for assignee in assignees %}
+                <option value="{{ assignee }}">{{ assignee }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="filter-label">Filter by Label:</label>
+            <select id="filter-label" class="form-select" onchange="filterIssues()">
+                <option value="all">All</option>
+                {% for label in labels %}
+                <option value="{{ label }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 
     <!-- Issues Table -->

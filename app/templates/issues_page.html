@@ -3,36 +3,53 @@
 {% block content %}
 <div class="container mt-4">
     <h1>Issues for {{ repo }}</h1>
-    <p>Repository Owner: {{ user_fullname }}</p>
+    <p>Repository Owner: {{ owner }}</p>
 
-    <!-- Filter and Sort Controls -->
-    <div class="mb-3">
-        <label for="filter-state">Filter by Status:</label>
-        <select id="filter-state" class="form-select" onchange="filterIssues()">
-            <option value="all">All</option>
-            <option value="open">Open</option>
-            <option value="closed">Closed</option>
-        </select>
+    <!-- Filter Form -->
+    <form method="POST" id="filter-form" class="mb-4">
+        <div class="row g-3 align-items-center">
+            <!-- Filter by Assignee -->
+            <div class="col-auto">
+                <label for="filter-assignee" class="col-form-label">Filter by Assignee:</label>
+            </div>
+            <div class="col-auto">
+                <select name="assignee" id="filter-assignee" class="form-select">
+                    <option value="">All</option>
+                    {% for assignee in assignees %}
+                        <option value="{{ assignee }}" {% if assignee == selected_assignee %}selected{% endif %}>{{ assignee }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <label for="filter-assignee" class="mt-2">Filter by Assignee:</label>
-        <select id="filter-assignee" class="form-select" onchange="filterIssues()">
-            <option value="all">All</option>
-            {% for assignee in assignees %}
-            <option value="{{ assignee }}">{{ assignee }}</option>
-            {% endfor %}
-        </select>
+            <!-- Filter by Label -->
+            <div class="col-auto">
+                <label for="filter-label" class="col-form-label">Filter by Label:</label>
+            </div>
+            <div class="col-auto">
+                <select name="label" id="filter-label" class="form-select">
+                    <option value="">All</option>
+                    {% for label in labels %}
+                        <option value="{{ label }}" {% if label == selected_label %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <label for="filter-label" class="mt-2">Filter by Label:</label>
-        <select id="filter-label" class="form-select" onchange="filterIssues()">
-            <option value="all">All</option>
-            {% for label in labels %}
-            <option value="{{ label }}">{{ label }}</option>
-            {% endfor %}
-        </select>
-    </div>
+            <!-- Filter by Status -->
+            <div class="col-auto">
+                <label for="filter-status" class="col-form-label">Filter by Status:</label>
+            </div>
+            <div class="col-auto">
+                <select name="status" id="filter-status" class="form-select">
+                    <option value="">All</option>
+                    <option value="open" {% if selected_status == 'open' %}selected{% endif %}>Open</option>
+                    <option value="closed" {% if selected_status == 'closed' %}selected{% endif %}>Closed</option>
+                </select>
+            </div>
+        </div>
+    </form>
 
     <!-- Issues Table -->
-    <div class="table-container">
+    <div class="table-container mt-4">
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -46,26 +63,26 @@
                     <th>Link</th>
                 </tr>
             </thead>
-            <tbody id="issues-table-body">
+            <tbody>
                 {% for issue in issues %}
-                <tr data-state="{{ issue.state }}" data-assignee="{{ issue.assignee }}" data-labels="{{ issue.labels|join(',') }}">
+                <tr>
                     <td>{{ issue.title }}</td>
                     <td>
                         <span class="badge {% if issue.state == 'open' %}bg-success{% else %}bg-danger{% endif %}">
                             {{ issue.state }}
                         </span>
                     </td>
-                    <td>{{ issue.assignee }}</td>
+                    <td>{{ issue.assignee or 'Unassigned' }}</td>
                     <td>
                         {% if issue.labels %}
-                        <span class="badge bg-secondary">{{ issue.labels }}</span>
+                            <span class="badge bg-secondary">{{ issue.labels }}</span>
                         {% else %}
                             <span class="text-muted">No Labels</span>
                         {% endif %}
                     </td>
-                    <td>{{ issue.milestone }}</td>
-                    <td>{{ issue.created_at }}</td>
-                    <td>{{ issue.updated_at }}</td>
+                    <td>{{ issue.milestone or 'N/A' }}</td>
+                    <td>{{ issue.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ issue.updated_at.strftime('%Y-%m-%d') }}</td>
                     <td>
                         <a href="{{ issue.url }}" target="_blank" class="btn btn-sm btn-info">View on GitHub</a>
                     </td>
@@ -78,41 +95,12 @@
     <a href="{{ url_for('main.repositories') }}" class="btn btn-secondary mt-3">Back to Repositories</a>
 </div>
 
-<script>
-    // Function to filter issues based on selected criteria
-    function filterIssues() {
-        const filterState = document.getElementById("filter-state").value;
-        const filterAssignee = document.getElementById("filter-assignee").value;
-        const filterLabel = document.getElementById("filter-label").value;
-
-        const rows = document.querySelectorAll("#issues-table-body tr");
-
-        rows.forEach(row => {
-            const state = row.getAttribute("data-state");
-            const assignee = row.getAttribute("data-assignee");
-            const labels = row.getAttribute("data-labels").split(",");
-
-            const stateMatch = filterState === "all" || state === filterState;
-            const assigneeMatch = filterAssignee === "all" || assignee === filterAssignee;
-            const labelMatch = filterLabel === "all" || labels.includes(filterLabel);
-
-            if (stateMatch && assigneeMatch && labelMatch) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
-        });
-    }
-</script>
-
 <style>
-    /* Table Container Styling */
     .table-container {
-        max-height: 500px;  /* Adjust height as needed */
-        overflow-y: auto;   /* Enable vertical scrolling */
+        max-height: 500px;
+        overflow-y: auto;
     }
 
-    /* Table Styling */
     .table-container table {
         width: 100%;
         border-collapse: collapse;
@@ -122,16 +110,31 @@
     .table-container td {
         padding: 8px;
         text-align: left;
-        border-bottom: 1px solid #dee2e6;  /* Match Bootstrap table border color */
+        border-bottom: 1px solid #dee2e6;
     }
 
     .table-container tbody tr:hover {
-        background-color: #f1f1f1;  /* Add hover effect for rows */
+        background-color: #f1f1f1;
     }
 
     .table-container .badge {
-        letter-spacing: normal;  /* Ensure normal spacing between letters */
-        white-space: nowrap;     /* Prevent text from breaking into multiple lines */
+        white-space: nowrap;
     }
 </style>
+
+<!-- JavaScript for Automatic Filtering -->
+<script>
+    // Automatically submit the form when filters are changed
+    document.getElementById('filter-assignee').addEventListener('change', function () {
+        document.getElementById('filter-form').submit();
+    });
+
+    document.getElementById('filter-label').addEventListener('change', function () {
+        document.getElementById('filter-form').submit();
+    });
+
+    document.getElementById('filter-status').addEventListener('change', function () {
+        document.getElementById('filter-form').submit();
+    });
+</script>
 {% endblock %}
